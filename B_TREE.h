@@ -1,67 +1,73 @@
-#ifndef __MYBTREE_H__
-#define __MYBTREE_H__
+#pragma once
 #include <iostream>
-#include <cstdlib>
+#include <vector>
 #include <cmath>
-#define STACKSIZE 30
-#define MAX 6
-
+#define STACKSIZE 40
 using namespace std;
 
-class Node {
-private:
-	int n;
-	int len;
-	int key[MAX - 1];
-	Node *pT[MAX];
-	Node(int d) {
+class Node
+{
+	int n, len;
+	int *key;
+	Node **child;
+
+	Node(int d)
+	{
 		n = 0;
 		len = d;
-		//포인터 및 키값 NULL로 초기화
-		/*key = new int[len - 1];
-		for (int i = 0; i < len - 1; i++){
-		key[i] = NULL;
-		}
-		pT = new Node*[len];
-		for (int i = 0; i < len; i++){
-		pT[i] = NULL;
-		}*/
-		for (int i = 0; i < MAX - 1; i++) {
+	
+		
+		key = new int[len - 1];
+		for (int i = 0; i < len - 1; i++)
+		{
 			key[i] = NULL;
 		}
-		for (int i = 0; i < MAX; i++) {
-			pT[i] = NULL;
+		child = new Node *[len];
+		for (int i = 0; i < len; i++)
+		{
+			child[i] = NULL;
 		}
+		
 	}
-	friend class Tree;
+	friend class B_TREE;
 };
 
-class Tree {
-private:
-	Node * T;
-	Node *S[STACKSIZE];
-	int IndS[STACKSIZE];
+class B_TREE
+{
+	Node *root;
+	Node *stack[STACKSIZE];
 	int top;
-	int topInd;
+	int indexStack[STACKSIZE];
+	int topIndex;
 public:
-	Tree() {
-		T = NULL;
+	B_TREE()
+	{
+		root = NULL;
 		top = -1;
-		topInd = -1;
+		topIndex = -1;
 	}
-	Node *getNode(int d);
-	void insertTree(int d, int newKey) { T = insertBtree(T, d, newKey); }
-	Node *insertBtree(Node *T, int m, int newKey);
-	void show() { inorder(T); }
-	void inorder(Node *T);
-	bool isFull();
-	bool isEmpty();
-	void push(Node *p);
-	void pushInd(int index);
-	Node *pop();
-	int popInd();
-	void deleteTree(int d, int oldKey) { T = delBtree(T, d, oldKey); }
-	Node *delBtree(Node *T, int m, int oldKey);
-};
 
-#endif
+	bool isEmpty();
+	bool isFull();
+	Node *getNode(int size);
+	void push(Node *p);
+	Node *pop();
+	void pushIndex(int index);
+	int popIndex();
+	Node *insertB_TREE(Node *p, int size, int key);
+	void insert(int size, int key)
+	{
+		root = insertB_TREE(root, size, key);
+	}
+	void inorderB_TREE(Node *p);
+	void display()
+	{
+		inorderB_TREE(root);
+	}
+	Node *deleteB_TREE(Node *p, int size, int key);
+	void delB_TREE(int size, int key)
+	{
+		root = deleteB_TREE(root, size, key);
+	}
+	bool existAvailableSibling(Node *p, int cost, int size);
+};

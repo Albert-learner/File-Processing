@@ -1,447 +1,588 @@
 #include "B_TREE.h"
 
-//빈 노드 생성
-Node* Tree::getNode(int m) {
-	Node *p = new Node(m);
+Node *B_TREE::getNode(int size)
+{
+	Node *newNode = new Node(size);
+	return newNode;
+}
+
+bool B_TREE::isEmpty()
+{
+	if (top == -1)
+		return true;
+	else
+		return false;
+}
+
+bool B_TREE::isFull()
+{
+	if (top == STACKSIZE - 1)
+		return true;
+	else
+		return false;
+}
+
+void B_TREE::push(Node *p)
+{
+	if (isFull())
+		return;
+	top++;
+	stack[top] = p;
+}
+
+Node *B_TREE::pop()
+{
+	if (isEmpty())
+		return NULL;
+	else
+		return stack[top--];
+}
+
+void B_TREE::pushIndex(int cost)
+{
+	if (topIndex == STACKSIZE - 1)
+		return ;
+	else
+	{
+		topIndex++;
+		indexStack[topIndex] = cost;
+	}
+}
+
+int B_TREE::popIndex()
+{
+	if (topIndex == -1)
+		return 0;
+	else
+		return indexStack[topIndex--];
+}
+
+void B_TREE::inorderB_TREE(Node *p)
+{
+	if (p == NULL)
+		return;
+	else
+	{
+		Node *x = p;
+		int pos = 0;
+		inorderB_TREE(x->child[pos]);
+		while (pos <= (x->n) - 1)
+		{
+			cout << x->key[pos] << " ";
+			inorderB_TREE(x->child[pos + 1]);
+			pos++;
+		}
+	}
+}
+
+Node *B_TREE::insertB_TREE(Node *p, int size, int key)
+{
+	if (p == NULL)
+	{
+		p = getNode(size);
+		p->key[0] = key;
+		(p->n)++;
+		return p;
+	}
+
+	Node *x = p;
+
+	while (x != NULL)
+	{
+		int i = 0;
+		while (i < (x->n) && key > x->key[i])
+		{
+			i++;
+		}
+		if (i < x->n && key == x->key[i])
+		{
+			top = -1;
+			return p;
+		}
+		push(x);
+		x = x->child[i];
+	}
+
+	Node *temp = getNode(size + 1);
+	Node *y = NULL;
+	bool confirm = false;
+	x = pop();
+
+	while (!confirm)
+	{
+		if (x->n < x->len - 1)
+		{
+			int temp_cost;
+			for (int i = 0; i < x->n; i++)
+			{
+				if (key < x->key[i])
+				{
+					Node *z = x->child[i + 1];
+					x->child[i + 1] = y;
+					y = z;
+					temp_cost = x->key[i];
+					x->key[i] = key;
+					key = temp_cost;
+				}
+			}
+			x->key[x->n] = key;
+			x->child[(x->n) + 1] = y;
+			(x->n)++;
+			confirm = true;
+		}
+		else
+		{
+			temp->child[0] = x->child[0];
+			for (int i = 0; i < x->n; i++)
+			{
+				temp->key[i] = x->key[i];
+				temp->child[i + 1] = x->child[i + 1];
+			}
+			temp->n = x->n;
+
+			int temp_cost;
+			for (int i = 0; i < temp->n; i++)
+			{
+				if (key < temp->key[i])
+				{
+					temp_cost = x->key[i];
+					temp->key[i] = key;
+					key = temp_cost;
+					Node *z = temp->child[i + 1];
+					temp->child[i + 1] = y;
+					y = z;
+				}
+			}
+			temp->key[temp->n] = key;
+			temp->n++;
+			temp->child[temp->n] = y;
+
+			//split
+			key = temp->key[(temp->n) / 2];
+			x->n = (temp->n) / 2;
+			x->child[0] = temp->child[0];
+			for (int i = 0; i < (temp->n) / 2; i++)
+			{
+				x->key[i] = temp->key[i];
+				x->child[i + 1] = temp->child[i + 1];
+			}
+			y = getNode(size);
+			y->n = (temp->n) - ((temp->n) / 2) - 1;
+
+			if (size % 2 != 0)
+			{
+				y->child[0] = temp->child[(temp->n) - (temp->n) / 2];
+				for (int i = 0; i < (temp->n) - ((temp->n) / 2) - 1; i++)
+				{
+					y->key[i] = temp->key[i + (temp->n) / 2 + 1];
+					y->child[i + 1] = temp->child[i + 1 + (temp->n) - ((temp->n) / 2)];
+				}
+			}
+			else
+			{
+				y->child[0] = temp->child[(temp->n) - ((temp->n) / 2) + 1];
+				for (int i = 0; i < (temp->n) - ((temp->n) / 2) - 1; i++)
+				{
+					y->key[i] = temp->key[i + (temp->n) / 2 + 1];
+					y->child[i + 1] = temp->child[i + 2 + (temp->n) - ((temp->n) / 2)];
+				}
+			}
+			if (!isEmpty())
+				x = pop();
+			else
+			{
+				p = getNode(size);
+				p->key[0] = key;
+				p->n++;
+				p->child[0] = x;
+				p->child[1] = y;
+				confirm = true;
+			}
+		}
+	}
+	top = -1;
 	return p;
 }
 
-//노드 입력 함수
-Node* Tree::insertBtree(Node *T, int m, int newKey) {
-	if (T == NULL) {             //트리가 비어있을 경우
-		T = getNode(m);
-		T->key[0] = newKey;
-		(T->n)++;
-		return T;
+bool B_TREE::existAvailableSibling(Node *p, int cost, int size)
+{
+	Node *sibling;
+	int position=0; 
+
+	if (p != NULL)
+	{
+		if (cost == 0)
+		{
+			sibling = p->child[1];
+			position = 1;
+		}
+		else if (cost == size - 1)
+		{
+			sibling = p->child[cost - 1];
+			position = 0;
+		}
+		else
+		{
+			if (p->child[cost + 1] == NULL)
+			{
+				sibling = p->child[cost - 1];
+				position = 0;
+			}
+			else if (p->n >= cost + 1 && p->child[cost - 1]->n < p->child[cost + 1]->n)
+			{
+				sibling = p->child[cost + 1];
+				position = 1;
+			}
+			else
+			{
+				sibling = p->child[cost - 1];
+				position = 0;
+			}
+		}
 	}
-
-	int i = 0;
-	Node *x = T;
-
-	while (x != NULL) {
-		int a = 0;
-		while (a < (x->n) && newKey > x->key[a]) { //newKey가 더 큰 값을 찾거나 Node에 들어있는 key값 개수 전까지 탐색
-			a++;
-		}
-		if (a < x->n && newKey == x->key[a]) { //만약 탐색 도중 newKey값과 같은 키 값을 찾게되면
-			top = -1;
-			return T;
-		}
-		push(x);        //경로를 스택에 저장
-		x = x->pT[a];   //다음 바로 밑의 포인터로
-	}
-	//삽입
-	Node *tempNode = getNode(m + 1); //key값이 많아지게 되어서 overflow가 될 때 newKey를 집어넣은 임시노드 생성
-	Node *y = NULL;
-	bool finished = false;
-	x = pop();                       //스택 안의 경로 가져옴
-	int newK = newKey;
-	while (!finished) {
-		if (x->n < x->len - 1) {      //노드 안에 key개수가 m-1보다 작을 경우
-			int temp;                //newK와 그 하위 포인터를 소팅하여 저장하고 while문 탈출
-			for (int i = 0; i < x->n; i++) {
-				if (newK < x->key[i]) {
-					Node *z = x->pT[i + 1];
-					x->pT[i + 1] = y;
-					y = z;
-					temp = x->key[i];
-					x->key[i] = newK;
-					newK = temp;
-				}
-			}
-			x->key[x->n] = newK;
-			x->pT[(x->n) + 1] = y;
-			(x->n)++;
-			finished = true;
-		}
-		else {                         //overflow가 되는 경우
-			int a;
-			tempNode->pT[0] = x->pT[0];      //임시 노드에 x노드 저장
-			for (int i = 0; i < x->n; i++) {
-				tempNode->key[i] = x->key[i];
-				tempNode->pT[i + 1] = x->pT[i + 1];
-			}
-			tempNode->n = x->n;
-
-			int temp;
-			for (int i = 0; i < tempNode->n; i++) { //임시 노드에 newK와 그 하위 포인터를 정렬하여 저장
-				if (newK < tempNode->key[i]) {
-					temp = x->key[i];
-					tempNode->key[i] = newK;
-					newK = temp;
-					Node *z = tempNode->pT[i + 1];
-					tempNode->pT[i + 1] = y;
-					y = z;
-				}
-			}
-			tempNode->key[tempNode->n] = newK;
-			tempNode->n++;
-			tempNode->pT[tempNode->n] = y;
-			//스플릿
-			newK = tempNode->key[(tempNode->n) / 2];  //newK를 임시 노드의 절반 지점에 있는 key값으로 설정
-			x->n = (tempNode->n) / 2;                 //임시노드의 키의 개수의 절반을 x의 키의 개수로 설정(int 형이므로 소수점은 버림)             
-			x->pT[0] = tempNode->pT[0];
-			for (int i = 0; i < (tempNode->n / 2); i++) { //새로운 x노드 저장
-				x->key[i] = tempNode->key[i];
-				x->pT[i + 1] = tempNode->pT[i + 1];
-			}
-			y = getNode(m);       //y노드 위한 새로운 공간 설정
-			y->n = (tempNode->n) - ((tempNode->n) / 2) - 1;  //중간값은 위로 올라가야되기 때문에 개수 조정
-															 //인덱스를 조절해 중간key값 이후의 포인터와 key값들을 y에 저장
-															 //case m이 홀수
-			if (m % 2 != 0) {
-				y->pT[0] = tempNode->pT[(tempNode->n) - ((tempNode->n) / 2)];
-				for (int i = 0; i < (tempNode->n) - ((tempNode->n) / 2) - 1; i++) {
-					y->key[i] = tempNode->key[i + (tempNode->n) / 2 + 1];
-					y->pT[i + 1] = tempNode->pT[i + 1 + (tempNode->n) - ((tempNode->n) / 2)];
-				}
-			}
-			//case m이 짝수
-			else {
-				y->pT[0] = tempNode->pT[(tempNode->n) - ((tempNode->n) / 2) + 1];
-				for (int i = 0; i < (tempNode->n) - ((tempNode->n) / 2) - 1; i++) {
-					y->key[i] = tempNode->key[i + (tempNode->n) / 2 + 1];
-					y->pT[i + 1] = tempNode->pT[i + 2 + (tempNode->n) - ((tempNode->n) / 2)];
-				}
-			}
-			if (!isEmpty()) { //아직 경로가 남았으면
-				x = pop();
-			}
-			else {    //경로 끝나서 새로운 root생성
-				T = getNode(m);
-				T->key[0] = newK;
-				T->n++;
-				T->pT[0] = x;
-				T->pT[1] = y;
-				finished = true;
-			}
-		}
-
-	}
-	top = -1;
-	return T;
+	if ((p->n > ceil(size / 2.0) - 1 && p->n >= ceil(size / 2.0) - 1) || (p->n == ceil(size / 2.0) - 1 && p->n > ceil(size / 2.0) - 1))
+		return true;
+	else
+		return false;
 }
 
-Node* Tree::delBtree(Node *T, int m, int oldKey) {
-	Node *x = T;
-	int k = 0;
-	while (x != NULL) {
-		int a = 0;
-		while (a < (x->n) && oldKey > x->key[a]) { //newKey가 더 큰 값을 찾거나 Node에 들어있는 key값 개수 전까지 탐색
-			a++;
-		}
-		if (a < x->n && oldKey == x->key[a]) { //만약 탐색 도중 newKey값과 같은 키 값을 찾게되면
-			k = a;
-			break;
-		}
-		push(x);        //경로를 스택에 저장
-		pushInd(a);
-		x = x->pT[a];   //다음 바로 밑의 포인터로
-	}
 
-	if (x == NULL) { //del할 것을 못찾았을 경우
+Node *B_TREE::deleteB_TREE(Node *p, int size, int del_key)
+{
+	if (p == NULL)
+	{
 		top = -1;
-		topInd = -1;
-		return T;
+		topIndex = -1;
+		return p;
 	}
-
-	Node *inNode = x;
-	if (x->pT[0] != NULL) {//내부 노드에서 발견될 경우
-		push(x);
-		pushInd(k + 1);
-		x = x->pT[k + 1];
-		while (x != NULL) {
+	else
+	{
+		Node *x = p;
+		Node *y = p;
+		int index = 0;
+		Node *inNode;
+		
+		do
+		{
+			int i = 0;
+			//
+			while (i < x->n && del_key > x->key[i])
+				i++;
+			if (i <= x->n && del_key == x->key[i])
+			{
+				index = i;
+				break;
+			}
 			push(x);
-			pushInd(0);
-			x = x->pT[0];
-		}
-		popInd();
-	}
+			pushIndex(i);
+			x = x->child[i];
+		} while (x != NULL);
 
-	if (x == NULL) {//내부 노드일 경우 후행키 교체
-		x = pop();
-		inNode->key[k] = x->key[0];
-		x->key[0] = oldKey;
-	}
-	int temp = oldKey;
-	for (int i = 0; i < x->n - 1; i++) {
-		if (x->key[i] == temp) {
-			x->key[i] = x->key[i + 1];
-			temp = x->key[i + 1];
-		}
-	}
-	x->n--;
-	//oldkey삭제
-	bool finished = false;
-	Node *y = NULL;
-	if (!isEmpty()) {
-		y = pop(); // y = x부모
-	}
-	while (!finished) {
-		Node * sib;
-		int pos;//0 = left, 1 = right;
-		int a;
-		if (y != NULL) {
-			a = popInd();
-			if (a == 0) {
-				sib = y->pT[1];
-				pos = 1;
-			}
-			else if (a == m - 1) {
-				sib = y->pT[a - 1];
-				pos = 0;
-			}
-			else {
-				if (y->pT[a + 1] == NULL) {
-					sib = y->pT[a - 1];
-					pos = 0;
-				}
-				else if (y->pT[a - 1]->n < y->pT[a + 1]->n && y->n >= a + 1) {
-					sib = y->pT[a + 1];
-					pos = 1;
-				}
-				else {
-					sib = y->pT[a - 1];
-					pos = 0;
-				}
-			}
+		inNode = x;
+		if (x->child[0] != NULL)
+		{
+			push(x);
+			pushIndex(index + 1);
+			x = x->child[index+1];
+			do
+			{
+				push(x);
+				pushIndex(0);
+				x = x->child[0];
+			} while (x != NULL);
+			popIndex();
 		}
 
-		if (x == T || x->n >= ceil(m / 2.0) - 1) {//x가 root거나 x가 underflow가 아니면
-			finished = true;
+		int temp;
+		if (x == NULL)
+		{
+			x=pop();
+			temp = inNode->key[index];
+			inNode->key[index] = x->key[0];
+			x->key[0] = temp;
 		}
 
-		else if (y->n > ceil(m / 2.0) - 1 && sib->n >= ceil(m / 2.0) - 1 || y->n == ceil(m / 2.0) - 1 && sib->n > ceil(m / 2.0) - 1) { // 키 재분배 및 합병(tree안변함)
-			Node *tempNode = getNode(ceil(1.5 * m));
-			if (pos == 0) {//sib 왼쪽
-				tempNode->pT[0] = sib->pT[0];
-				int i = 0;
-				for (i = 0; i < sib->n; i++) {
-					tempNode->key[i] = sib->key[i];
-					tempNode->pT[i + 1] = sib->pT[i + 1];
-				}
-				tempNode->key[i] = y->key[a - 1];
-				tempNode->pT[++i] = x->pT[0];
-
-				for (int b = 0; i < 1 + sib->n + x->n; b++, i++) {
-					tempNode->key[i] = x->key[b];
-					tempNode->pT[i + 1] = x->pT[b + 1];
-				}
-				tempNode->n = 1 + sib->n + x->n;
-
-				if (sib->n >ceil(m / 2.0) - 1) {//sib 여유 있으면 재분배
-					sib->pT[0] = tempNode->pT[0];
-					sib->n = 0;
-					for (i = 0; i < tempNode->n / 2; i++) {
-						sib->key[i] = tempNode->key[i];
-						sib->n++;
-					}
-					y->key[a - 1] = tempNode->key[i];
-					x->pT[0] = tempNode->pT[++i];
-					for (int b = 0; i < tempNode->n; b++, i++) {
-						x->key[b] = tempNode->key[i];
-						x->pT[b + 1] = tempNode->pT[i + 1];
-						x->n++;
-					}
-				}
-				else {//sib 여유없음 합병
-					sib->pT[0] = tempNode->pT[0];
-					for (int b = 0; b < tempNode->n; b++) {
-						sib->key[b] = tempNode->key[b];
-						sib->pT[b + 1] = tempNode->pT[b + 1];
-					}
-					sib->n = tempNode->n;
-					y->key[a - 1] = tempNode->key[tempNode->n - 1];
-					if (a != 0) {
-						for (int b = a - 1; b < y->n; b++) {           //여기야!ㄴ
-							y->key[b] = y->key[b + 1];
-							y->pT[b + 1] = y->pT[b + 2];
-						}
-						y->pT[y->n] = y->pT[y->n + 1];
-						y->n--;
-					}
-					else {
-						for (int b = a; b < y->n; b++) {
-							y->key[b] = y->key[b + 1];
-							y->pT[b + 1] = y->pT[b + 2];
-						}
-						y->pT[y->n] = y->pT[y->n + 1];
-						y->n--;
-					}
-				}
-
-			}
-			else {//sib 오른쪽
-				tempNode->pT[0] = x->pT[0];
-				int i = 0;
-				for (i = 0; i < x->n; i++) {
-					tempNode->key[i] = x->key[i];
-					tempNode->pT[i + 1] = x->pT[i + 1];
-				}
-				tempNode->key[i] = y->key[a];
-				tempNode->pT[++i] = sib->pT[0];
-
-				for (int b = 0; i < 1 + sib->n + x->n; b++, i++) {
-					tempNode->key[i] = sib->key[b];
-					tempNode->pT[i + 1] = sib->pT[b + 1];
-				}
-				tempNode->n = 1 + sib->n + x->n;
-
-				if (sib->n >ceil(m / 2.0) - 1) {//sib 여유 있으면 재분배
-					x->pT[0] = tempNode->pT[0];
-					for (i = 0; i < tempNode->n / 2; i++) {
-						x->key[i] = tempNode->key[i];
-						x->pT[i + 1] = tempNode->pT[i + 1];
-						x->n++;
-					}
-					y->key[a] = tempNode->key[i];
-					sib->pT[0] = tempNode->pT[++i];
-					sib->n = 0;
-					for (int b = 0; i < tempNode->n; b++, i++) {
-						sib->key[b] = tempNode->key[i];
-						sib->pT[b + 1] = tempNode->pT[i + 1];
-						sib->n++;
-					}
-				}
-				else {//sib 여유없음 합병
-					x->pT[0] = tempNode->pT[0];
-					for (int b = 0; b < tempNode->n; b++) {
-						x->key[b] = tempNode->key[b];
-						x->pT[b + 1] = tempNode->pT[b + 1];
-					}
-					x->n = tempNode->n;
-					y->key[a] = tempNode->key[tempNode->n - 1];
-					if (a != 0) {
-						for (int b = a - 1; b < y->n; b++) {
-							y->key[b] = y->key[b + 1];
-							y->pT[b + 1] = y->pT[b + 2];
-						}
-						y->pT[y->n] = y->pT[y->n + 1];
-						y->n--;
-					}
-					else {
-						for (int b = a; b < y->n; b++) {
-							y->key[b] = y->key[b + 1];
-							y->pT[b + 1] = y->pT[b + 2];
-						}
-						y->pT[y->n] = y->pT[y->n + 1];
-						y->n--;
-					}
-				}
-			}
-			finished = true;
-		}
-		else {
-			if (pos == 0) {
-				sib->key[sib->n] = y->key[a - 1];
-				sib->n++;
-				sib->pT[sib->n] = x->pT[0];
-				y->n--;
-				int b = sib->n;
-				for (int q = 0; b < sib->n + x->n; b++, q++) {
-					sib->key[b] = x->key[q];
-					sib->pT[b + 1] = x->pT[q + 1];
-				}
-				sib->n = sib->n + x->n;
-				y->pT[a] = NULL;
-			}
-			else {
-				x->key[x->n] = y->key[a];
-				x->n++;
-				x->pT[sib->n] = sib->pT[0];
-				y->n--;
-				int b = x->n;
-				for (int q = 0; b < x->n + sib->n; b++, q++) {
-					x->key[b] = sib->key[q];
-					x->pT[b + 1] = sib->pT[q + 1];
-				}
-				x->n = x->n + sib->n;
-				y->pT[a + 1] = NULL;
-			}
-			if (!isEmpty()) {
-				x = y;
-				y = pop();
-			}
-			else {
-				if (pos == 0) {
-					x = sib;
-				}
-				finished = true;
+		int del = del_key;
+		for (int i = 1; i < x->n; i++)
+		{
+			if (x->key[i - 1] == del)
+			{
+				x->key[i - 1] = x->key[i];
+				del = x->key[i];
 			}
 		}
-	}
-
-	if (y == NULL || y->n == 0) {
-		T = x;
+		(x->n)--;
+		
+		bool confirm = false;
 		y = NULL;
-	}
+		if (!isEmpty())
+		{
+			y = pop();
+		}
 
-	top = -1;
-	topInd = -1;
-	return T;
-}
+		//delete
+		do
+		{
+			Node *sibling;
+			int position = 0;
+			int cost = popIndex();
 
-void Tree::inorder(Node *T) {
-	if (T == NULL) {
-		return;
-	}
-	Node *x = T;
-	int a = 0;
-	inorder(x->pT[a]);
-	while (a <= (x->n) - 1) {
-		cout << x->key[a] << " ";
-		inorder(x->pT[a + 1]);
-		a++;
-	}
-}
+			if (x == p || x->n >= ceil(size / 2.0) - 1)
+				confirm = true;
+			else if (existAvailableSibling(y, cost, size))
+			{
+				if (y != NULL)
+				{
+					if (cost == 0)
+					{
+						sibling = y->child[1];
+						position = 1;
+					}
+					else if (cost == size - 1)
+					{
+						sibling = y->child[cost - 1];
+						position = 0;
+					}
+					else
+					{
+						if (y->child[cost + 1] == NULL)
+						{
+							sibling = y->child[cost - 1];
+							position = 0;
+						}
+						else if (y->n >= cost + 1 && y->child[cost - 1]->n < y->child[cost + 1]->n)
+						{
+							sibling = y->child[cost + 1];
+							position = 1;
+						}
+						else
+						{
+							sibling = y->child[cost - 1];
+							position = 0;
+						}
+					}
+				}
+				Node *tempN = getNode(ceil(1.5*size));
+				if (position == 0)
+				{
+					tempN->child[0] = sibling->child[0];
+					int idx = 0;
+					for (idx = 0; idx < sibling->n; idx++)
+					{
+						tempN->key[idx] = sibling->key[idx];
+						tempN->child[idx + 1] = sibling->child[idx + 1];
+					}
+					tempN->key[idx] = y->key[cost - 1];
+					tempN->child[++idx] = x->child[0];
 
-bool Tree::isFull() {
-	if (top == STACKSIZE - 1) {
-		return true;
-	}
-	else {
-		return false;
-	}
-}
-bool Tree::isEmpty() {
-	if (top == -1) {
-		return true;
-	}
-	else {
-		return false;
-	}
-}
+					for (int i = 0; idx < 1 + sibling->n + x->n; i++, idx++)
+					{
+						tempN->key[idx] = x->key[i];
+						tempN->child[idx + 1] = x->child[i + 1];
+					}
+					tempN->n = 1 + sibling->n + x->n;
 
-void Tree::push(Node *p) {
-	if (isFull()) {
-		return;
-	}
-	else {
-		top++;
-		S[top] = p;
-	}
-}
+					if (sibling->n > ceil(size / 2.0) - 1)
+					{
+						sibling->child[0] = tempN->child[0];
+						sibling->n = 0;
 
-void Tree::pushInd(int p) {
-	if (topInd == STACKSIZE - 1) {
-		return;
-	}
-	else {
-		topInd++;
-		IndS[topInd] = p;
-	}
-}
+						for (idx = 0; idx < tempN->n / 2; idx++)
+						{
+							sibling->key[idx] = tempN->key[idx];
+							sibling->n++;
+						}
+						y->key[cost - 1] = tempN->key[idx];
+						x->child[0] = tempN->child[++idx];
+						for (int i = 0; idx < tempN->n; i++, idx++)
+						{
+							x->key[i] = tempN->key[idx];
+							x->child[i + 1] = tempN->child[idx + 1];
+							x->n++;
+						}
+					}
+					else
+					{
+						sibling->child[0] = tempN->child[0];
+						for (int i = 0; i < tempN->n; i++)
+						{
+							sibling->key[i] = tempN->key[i];
+							sibling->child[i + 1] = tempN->child[i + 1];
+						}
+						sibling->n = tempN->n;
+						y->key[cost - 1] = tempN->key[tempN->n - 1];
 
-Node* Tree::pop() {
-	if (isEmpty()) {
-		return NULL;
-	}
-	return (S[top--]);
-}
+						if (cost != 0)
+						{
+							for (int i = cost - 1; i < y->n; i++)
+							{
+								y->key[i] = y->key[i + 1];
+								y->child[i + 1] = y->child[i + 2];
+							}
+							y->child[y->n] = y->child[y->n + 1];
+							y->n--;
+						}
+					}
+				}
+				else
+				{
 
-int Tree::popInd() {
-	if (topInd == -1) {
-		return NULL;
+					tempN->child[0] = x->child[0];
+					int idx = 0;
+					for (idx = 0; idx < x->n; idx++)
+					{
+						tempN->key[idx] = x->key[idx];
+						tempN->child[idx + 1] = x->child[idx + 1];
+					}
+					tempN->key[idx] = y->key[cost];
+					tempN->child[++idx] = sibling->child[0];
+
+					for (int i = 0; i < 1 + sibling->n + x->n; i++, idx++)
+					{
+						tempN->key[idx] = sibling->key[i];
+						tempN->child[idx + 1] = sibling->child[i + 1];
+					}
+					tempN->n = 1 + sibling->n + x->n;//temp 복사
+
+					if (sibling->n > ceil(size / 2.0) - 1)//재분배
+					{
+						x->child[0] = tempN->child[0];
+						for (idx = 0; idx < tempN->n / 2; idx++)
+						{
+							x->key[idx] = tempN->key[idx];
+							x->child[idx + 1] = tempN->child[idx + 1];
+							x->n++;
+						}
+						y->key[cost] = tempN->key[idx];
+						sibling->child[0] = tempN->child[++idx];
+						sibling->n = 0;
+
+						for (int i = 0; idx < tempN->n; i++, idx++)
+						{
+							sibling->key[i] = tempN->key[idx];
+							sibling->child[i + 1] = tempN->child[idx + 1];
+							sibling->n++;
+						}
+					}
+					else
+					{
+						x->child[0] = tempN->child[0];
+						for (int i = 0; i < tempN->n; i++)
+						{
+							x->key[i] = tempN->key[i];
+							x->child[i + 1] = tempN->child[i + 1];
+						}
+						x->n = tempN->n;
+						y->key[cost] = tempN->key[tempN->n - 1];
+						if (cost != 0)
+						{
+							for (int i = cost - 1; i < y->n; i++)
+							{
+								y->key[i] = y->key[i + 1];
+								y->child[i + 1] = y->child[i + 2];
+							}
+							y->child[y->n] = y->child[y->n + 1];
+							y->n--;
+						}
+						else
+						{
+							for (int i = cost; i < y->n; i++)
+							{
+								y->key[i] = y->key[i + 1];
+								y->child[i + 1] = y->child[i + 2];
+							}
+							y->child[y->n] = y->child[y->n + 1];
+							y->n--;
+						}
+					}					
+				}
+			confirm = true;
+			}
+			else
+			{
+				if (y != NULL)
+				{
+					if (cost == 0)
+					{
+						sibling = y->child[1];
+						position = 1;
+					}
+					else if (cost == size - 1)
+					{
+						sibling = y->child[cost - 1];
+						position = 0;
+					}
+					else
+					{
+						if (y->child[cost + 1] == NULL)
+						{
+							sibling = y->child[cost - 1];
+							position = 0;
+						}
+						else if (y->n >= cost + 1 && y->child[cost - 1]->n < y->child[cost + 1]->n)
+						{
+							sibling = y->child[cost + 1];
+							position = 1;
+						}
+						else
+						{
+							sibling = y->child[cost - 1];
+							position = 0;
+						}
+					}
+				}
+				if (position == 0)
+				{
+					sibling->key[sibling->n] = y->key[cost - 1];
+					sibling->n++;
+					sibling->child[sibling->n] = x->child[0];
+					y->n--;
+
+					int tmp = sibling->n;
+					for (int i = 0; tmp < sibling->n + x->n; i++, tmp++)
+					{
+						sibling->key[tmp] = x->key[i];
+						sibling->child[tmp + 1] = x->child[i + 1];
+					}
+					sibling->n = sibling->n + x->n;
+					delete(y->child[cost]);
+				}
+				else
+				{
+					x->key[x->n] = y->key[cost];
+					x->n++;
+					x->child[sibling->n] = sibling->child[0];
+					y->n--;
+					int cri = x->n;
+					for (int i = 0; cri < x->n + sibling->n; i++, cri++)
+					{
+						x->key[cri] = sibling->key[i];
+						x->child[cri + 1] = sibling->child[i + 1];
+					}
+					x->n += sibling->n;
+					delete(y->child[cost + 1]);
+				}
+				if (!isEmpty())
+				{
+					x = y;
+					y = pop();
+				}
+				else
+				{
+					if (position == 0)
+						x = sibling;
+					confirm = true;
+				}
+			}
+		} while (!confirm);
+
+		if (y == NULL || y->n == 0)
+		{
+			p = x;
+			delete(y);
+		}
+		top = -1;
+		topIndex = -1;
+		return p;
 	}
-	return (IndS[topInd--]);
 }
